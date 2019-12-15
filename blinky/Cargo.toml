@@ -1,0 +1,19 @@
+[package]
+name = "blinky"
+version = "0.1.0"
+authors = ["Yusef Karim <yusefkarim@riseup.net>"]
+edition = "2018"
+
+[dependencies]
+# Provides startup code and useful attributes
+# https://docs.rs/riscv-rt/0.6.1/riscv_rt/
+riscv-rt = "0.6.1"
+# Set the panicking behavior to halt the CPU
+# https://docs.rs/crate/panic-halt/0.2.0
+panic-halt = "0.2.0"
+# Provides low-level access to registers and assembly instructions
+# https://docs.rs/riscv/0.5.4/riscv/
+riscv = "0.5.4"
+# Peripheral access API for GD32VF103
+# https://docs.rs/gd32vf103-pac/0.1.0/gd32vf103_pac/
+gd32vf103-pac = "0.1.0"
