@@ -1,39 +1,37 @@
 # Author: Yusef Karim
 # To install cargo-make run: cargo install cargo-make
 [env]
-RELEASE_EXE   = "target/riscv32imac-unknown-none-elf/debug/${CARGO_MAKE_CRATE_NAME}"
-RELEASE_BIN   = "target/riscv32imac-unknown-none-elf/debug/${CARGO_MAKE_CRATE_NAME}.bin"
-TRIPLE 		  = "riscv64-unknown-elf"
-GDB			  = "${TRIPLE}-gdb"
-OBJCOPY		  = "${TRIPLE}-objcopy"
-# TODO: Don't have OpenOCD working yet
-OPENOCD_TRGT  = "-f target/TODO"
-OPENOCD_INTF  = "-f interface/TODO"
-OPENOCD_CMD	  = "openocd ${OPENOCD_INTF} ${OPENOCD_TRGT} -c"
+TARGET_ELF    = "target/${CARGO_MAKE_CRATE_TARGET_TRIPLE}/debug/${CARGO_MAKE_CRATE_NAME}"
+TARGET_BIN    = "target/${CARGO_MAKE_CRATE_TARGET_TRIPLE}/debug/${CARGO_MAKE_CRATE_NAME}.bin"
+# TODO: Don't have GDB or OpenOCD working yet
+# OPENOCD_INTF  = "-f interface/TODO"
+# OPENOCD_TRGT  = "-f target/TODO"
+# OPENOCD_CMD	  = "openocd ${OPENOCD_INTF} ${OPENOCD_TRGT} -c"
+# GDB_CMD       = "arm-none-eabi-gdb -q"
 
 [tasks.load]
 description = "Use dfu-util to load raw binary file via onboard bootloader"
 dependencies = ["build", "bin"]
-script = ["sudo ../dfu-util -a 0 -s 0x08000000:leave -D ${RELEASE_BIN}"]
+script = ["../gd32vflash/dfu-util -a 0 -s 0x08000000:leave -D ${TARGET_BIN}"]
 
-[tasks.flash]
-# TODO
-description = "Use OpenOCD to flash raw binary file to board"
-dependencies = ["build", "bin"]
-script = ["${OPENOCD_CMD} \"program ${RELEASE_BIN} reset exit 0x08000000\""]
+# [tasks.flash]
+# description = "Flash binary file using debugger, assumes memory address 0x08000000"
+# dependencies = ["build", "bin"]
+# script = ["${OPENOCD_CMD} \"program ${TARGET_BIN} reset exit 0x08000000\""]
 
 [tasks.bin]
 description = "Copies compiled executable to raw binary using objcopy"
-dependencies = ["build"]
-script = ["${OBJCOPY} -O binary ${RELEASE_EXE} ${RELEASE_BIN}"]
+command = "cargo"
+args = ["objcopy", "--bin", "${CARGO_MAKE_CRATE_NAME}", "--", "-O", "binary", "${TARGET_BIN}"]
 
+# [tasks.erase]
+# description = "Uses OpenOCD to erase all flash memory on target board, requires debugger"
+# script = ["${OPENOCD_CMD} \"init; reset halt; stm32f4x mass_erase 0; exit\""]
 
-[tasks.erase]
-# TODO
-description = "Uses OpenOCD to erase all flash memory on target board"
-script = ["${OPENOCD_CMD} \"init; reset halt; stm32f1x mass_erase 0; exit\""]
+# [tasks.host]
+# description = "Use semi-hosting to see debug output, requires debugger"
+# script = ["${OPENOCD_CMD} \"init; arm semihosting enable\""]
 
-[tasks.host]
-# TODO
-description = ""
-script = ["${OPENOCD_CMD} \"init; arm semihosting enable\""]
+# [tasks.attach]
+# description = "Attach to running OpenOCD server via GDB"
+# script = ["${GDB_CMD} ${TARGET_ELF} -ex \"target remote localhost:3333\""]
