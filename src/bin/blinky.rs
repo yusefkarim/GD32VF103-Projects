@@ -20,8 +20,6 @@ fn main() -> ! {
     rcu.apb2en.write(|w| w.paen().set_bit().pcen().set_bit());
     unsafe {
         gpioc.ctl1.write(|w| w.md13().bits(0b10).ctl13().bits(0b00));
-    }
-    unsafe {
         gpioa.ctl0.write(|w| {
             w.md1()
                 .bits(0b10)
