@@ -6,5 +6,5 @@ rustflags = [
 ]
 
 [target.riscv32imac-unknown-none-elf]
-runner = 'riscv32-elf-gdb -command=debug.gdb'
+runner = 'riscv32-elf-gdb --batch --command=debug.gdb'
 

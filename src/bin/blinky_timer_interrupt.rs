@@ -1,5 +1,5 @@
 //! On-board RGB led
-//! - Red =   PC13
+//! - Red = PC13
 // #![deny(unsafe_code)]
 #![no_std]
 #![no_main]
@@ -12,6 +12,7 @@ use riscv::{asm::wfi, interrupt::Mutex};
 use riscv_rt::entry;
 
 static GPIOC: Mutex<RefCell<Option<device::GPIOC>>> = Mutex::new(RefCell::new(None));
+static TIMER0: Mutex<RefCell<Option<device::TIMER0>>> = Mutex::new(RefCell::new(None));
 
 // TODO: Configure clock to max frequency in separate lib.rs file. Include in here and use
 #[entry]
@@ -28,7 +29,7 @@ fn main() -> ! {
             gpioc
                 .ctl1
                 .write(|w| unsafe { w.md13().bits(0b10).ctl13().bits(0b00) });
-            gpioc.octl.modify(|_, w| w.octl13().set_bit()); // OFF
+            gpioc.octl.modify(|_, w| w.octl13().clear_bit()); // ON
 
             // Setup TIMER0 (see GD32VF103 User Manual Section 15.1)
             rcu.apb2en.modify(|_, w| w.timer0en().set_bit());
@@ -53,7 +54,6 @@ fn main() -> ! {
             tim0.ctl0.modify(|_, w| w.cen().set_bit());
 
             // Setup ECLIC (see Bumblebee Core Architecture Manual Section 6.2)
-            // eclic.cliccfg.write(|w| unsafe { w.nlbits().bits(0) });
             // eclic.mth.write(|w| unsafe { w.bits(0) });
             // Setup interrupt service routine for TIMER0
             interrupt!(TIMER0_UP, tim0_isr);
@@ -64,17 +64,21 @@ fn main() -> ! {
             eclic.clicints[i]
                 .clicintattr
                 .write(|w| unsafe { w.trig().bits(0).shv().set_bit() });
-            // TODO: Unsure how to calculate level and priority correctly
+            // TODO: Check the calculation of level and priority is correct
+            // This makes upper 4-bit of the effective bits in clicintctl
+            // be used for level, while lower 4 are used for priority
+            eclic.cliccfg.write(|w| unsafe { w.nlbits().bits(4) });
             eclic.clicints[i]
                 .clicintctl
-                .write(|w| unsafe { w.level_priority().bits(12) });
+                .write(|w| unsafe { w.level_priority().bits(1 << 4 | 1) });
             // Clear pending (initiated) bit
             eclic.clicints[i].clicintip.write(|w| w.ip().clear_bit());
             // Enable (unmask) TIMER0 interrupt
             eclic.clicints[i].clicintie.write(|w| w.ie().set_bit());
 
-            // Transfer GPIOC into shared global structures
+            // Transfer GPIOC & TIMER0 into shared global structures
             GPIOC.borrow(cs).replace(Some(gpioc));
+            TIMER0.borrow(cs).replace(Some(tim0));
         });
     }
 
@@ -90,9 +94,12 @@ fn main() -> ! {
 fn tim0_isr() {
     riscv::interrupt::free(|cs| {
         if let Some(gpioc) = GPIOC.borrow(cs).borrow().deref() {
-            gpioc.octl.write(|w| w.octl13().clear_bit()); // ON
+            gpioc.octl.modify(|_, w| w.octl13().set_bit()); // OFF
+        }
+
+        if let Some(tim0) = TIMER0.borrow(cs).borrow().deref() {
+            tim0.intf.modify(|_, w| w.upif().clear_bit());
         }
     });
-    // tim0.intf.modify(|_, w| w.upif().clear_bit());
     // eclic.clicints[i].clicintip.write(|w| w.ip().clear_bit());
 }

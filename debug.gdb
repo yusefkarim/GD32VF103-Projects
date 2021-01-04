@@ -2,4 +2,3 @@ target extended-remote /dev/serial/by-id/usb-RV-LINK_Longan_Nano_GD32XXX-3.0.0-7
 monitor reset halt
 load
 monitor reset run
-quit
